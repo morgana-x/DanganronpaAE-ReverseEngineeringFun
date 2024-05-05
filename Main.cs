@@ -29,7 +29,9 @@ namespace Launcher
             long gunAmmo_type_break_address = baseAddress + 0x7B93C4;
             long gunAmmo_type_knockback_address = baseAddress + 0x7B93CA;
             long gunAmmo_type_dance_address = baseAddress + 0x7B93CC;
+            long gunAmmo_type_burn_address = baseAddress + 0x7B93C6;
             long gunAmmo_type_paralyze_address = baseAddress + 0x7B93C8;
+            long gunAmmo_type_link_address = baseAddress + 0x7B93CE;
 
             long target_posxAddress = baseAddress + 0x827130; // Not player pos, npc pathfinding target(?) towards komaru
             long target_posyAddress = baseAddress + 0x827134; // Not player pos, npc pathfinding target(?) towards komaru
@@ -47,6 +49,8 @@ namespace Launcher
             short gun_ammo_dance = MemoryRead.ReadShort(processHandle, gunAmmo_type_dance_address);
             short gun_ammo_knockback = MemoryRead.ReadShort(processHandle, gunAmmo_type_knockback_address);
             short gun_ammo_paralyze = MemoryRead.ReadShort(processHandle, gunAmmo_type_paralyze_address);
+            short gun_ammo_burn = MemoryRead.ReadShort(processHandle, gunAmmo_type_burn_address);
+            short gun_ammo_link = MemoryRead.ReadShort(processHandle, gunAmmo_type_link_address);
             int monocoins = MemoryRead.ReadInt(processHandle, monocoinsAddress);
             //Console.WriteLine("NPC Target Position: " + "\n \t" + "x: " + target_pos_x + "\n \t" + "y: " + target_pos_y + "\n \t" + "z: " + target_pos_z);
             Console.SetCursorPosition(0,0);
@@ -58,8 +62,10 @@ namespace Launcher
             Console.WriteLine("Ammo (Dance): " + gun_ammo_dance);
             Console.WriteLine("Ammo (Knockback): " + gun_ammo_knockback);
             Console.WriteLine("Ammo (Paralyze): " + gun_ammo_paralyze);
+            Console.WriteLine("Ammo (burn): " + gun_ammo_burn);
+            Console.WriteLine("Ammo (Link): " + gun_ammo_link);
             Console.WriteLine("Monocoins: " + monocoins);
-            Console.SetCursorPosition(cx, (cy > 7) ? cy : 8);
+            Console.SetCursorPosition(cx, (cy > 10) ? cy : 11);
 
             if (InfHealth)
             {
