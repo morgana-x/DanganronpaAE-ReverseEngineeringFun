@@ -58,6 +58,17 @@ public class MemoryRead
         byte[] buffer = BitConverter.GetBytes(value);
         WriteMemory(processHandle, addr, buffer);
     }
+    public static long ReadLong(int processHandle, long addr)
+    {
+        byte[] buffer = new byte[8];
+        ReadMemory(processHandle, addr, ref buffer);
+        return BitConverter.ToInt64(buffer, 0);
+    }
+    public static void WriteLong(int processHandle, long addr, long value)
+    {
+        byte[] buffer = BitConverter.GetBytes(value);
+        WriteMemory(processHandle, addr, buffer);
+    }
     public static short ReadShort(int processHandle, long addr)
     {
         byte[] buffer = new byte[2];

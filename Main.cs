@@ -18,6 +18,59 @@ namespace Launcher
         public bool InfHealth = false;
         public bool InfAmmo = false;
 
+        private long[] GetEntityPointers()
+        {
+            long numberofLivingEntitiesAddress = baseAddress + 0x7EC278;
+            int numberOfLivingEntities = MemoryRead.ReadInt(processHandle, numberofLivingEntitiesAddress);
+
+            long[] entityOffsets = new long[numberOfLivingEntities];
+
+            for (int i=0; i < numberOfLivingEntities; i++)
+            {
+                entityOffsets[i] = MemoryRead.ReadLong(processHandle, numberofLivingEntitiesAddress + (8 * (i+1)));
+            }
+
+            return entityOffsets;
+        }
+        public List<Entity> GetEntityList()
+        {
+            List<Entity> entityList = new List<Entity>();
+
+            long[] entityPointers = GetEntityPointers();
+
+            foreach (var x in entityPointers)
+            {
+                entityList.Add(new Entity( x, processHandle));
+            }
+
+            return entityList;
+
+        }
+        public void SpawnEntity()
+        {
+            long numberofLivingEntitiesAddress = baseAddress + 0x7EC278;
+            int numberOfLivingEntities = MemoryRead.ReadInt(processHandle, numberofLivingEntitiesAddress);
+
+            long entityPointer = GetEntityPointers()[numberOfLivingEntities-1] + 11200;
+
+            byte[] kotoMaruData = new byte[11200];
+            MemoryRead.ReadMemory(processHandle, GetEntityPointers()[0], ref kotoMaruData);
+
+
+            MemoryRead.WriteMemory(processHandle, entityPointer, kotoMaruData);
+
+            MemoryRead.WriteLong(processHandle, numberofLivingEntitiesAddress + (8 * ( (numberOfLivingEntities) + 1)), entityPointer);
+
+            MemoryRead.WriteInt(processHandle, numberofLivingEntitiesAddress, numberOfLivingEntities + 1);
+        }
+        public Entity GetKomaruEntity()
+        {
+            return GetEntityList()[0];
+        }
+        public Entity GetFukawaEntity()
+        {
+            return GetEntityList()[1];
+        }
         public void Main_Loop_Main()
         {
 
@@ -25,6 +78,9 @@ namespace Launcher
             long healthAddress = baseAddress + 0x7B93BE;
             long selectedGunAddress = baseAddress + 0x7B93C2; // or 0x786658
             long monocoinsAddress = baseAddress + 0x7B9434; // or 0x786B64
+            long playerAimingAddress = baseAddress + 0x2E4498;
+
+            long numberofLivingEntitiesAddress = baseAddress + 0x7EC278;
 
             long gunAmmo_type_break_address = baseAddress + 0x7B93C4;
             long gunAmmo_type_knockback_address = baseAddress + 0x7B93CA;
@@ -52,20 +108,31 @@ namespace Launcher
             short gun_ammo_burn = MemoryRead.ReadShort(processHandle, gunAmmo_type_burn_address);
             short gun_ammo_link = MemoryRead.ReadShort(processHandle, gunAmmo_type_link_address);
             int monocoins = MemoryRead.ReadInt(processHandle, monocoinsAddress);
+
+            byte[] aimBuffer = new byte[1];
+            MemoryRead.ReadMemory(processHandle, playerAimingAddress, ref aimBuffer);
+            bool player_aiming = (aimBuffer[0] == 1);
+
+            int numberOfLivingEntities = MemoryRead.ReadInt(processHandle, numberofLivingEntitiesAddress);
             //Console.WriteLine("NPC Target Position: " + "\n \t" + "x: " + target_pos_x + "\n \t" + "y: " + target_pos_y + "\n \t" + "z: " + target_pos_z);
             Console.SetCursorPosition(0,0);
             var (cx, cy) = Console.GetCursorPosition();
+            Console.Clear();
             Console.WriteLine("Level: " + player_level);
             Console.WriteLine("Health: " + health);
             Console.WriteLine("Selected Gun: " + selected_gun_type);
-            Console.WriteLine("Ammo (Break): " + gun_ammo_break);
-            Console.WriteLine("Ammo (Dance): " + gun_ammo_dance);
-            Console.WriteLine("Ammo (Knockback): " + gun_ammo_knockback);
-            Console.WriteLine("Ammo (Paralyze): " + gun_ammo_paralyze);
-            Console.WriteLine("Ammo (burn): " + gun_ammo_burn);
-            Console.WriteLine("Ammo (Link): " + gun_ammo_link);
+            Console.WriteLine("Aiming: " + player_aiming);
+            for (int i=0; i < 8; i++)
+            {
+                short amount = MemoryRead.ReadShort(processHandle, gunAmmo_type_break_address + (i * 2));
+
+                Console.WriteLine("Ammo[" + i + "]: " + amount + (amount == -2 ? " (Unlimited)" : "") + (amount == -1 ? " (Disabled)" : ""));
+            }
             Console.WriteLine("Monocoins: " + monocoins);
-            Console.SetCursorPosition(cx, (cy > 10) ? cy : 11);
+            Console.WriteLine("Number of entities (not counting coins): " + numberOfLivingEntities);
+            Console.WriteLine("Entity Pointers:\n[\t" + string.Join("\n[\t", GetEntityPointers()));
+            Console.WriteLine("Entity List: \n" + string.Join("\n", GetEntityList()));
+            Console.WriteLine(new string ('\n', 4) + tempinp);
 
             if (InfHealth)
             {
@@ -85,7 +152,78 @@ namespace Launcher
             }
 
         }
+        string tempinp = "";
 
+        private bool ProcessCommand(string inp)
+        {
+            if (inp != "")
+            {
+                tempinp = "";
+            }
+            if (inp == "quit")
+            {
+                return true;
+            }
+            if (inp == "infhp")
+            {
+                InfHealth = !InfHealth;
+            }
+            if (inp == "infammo")
+            {
+                InfAmmo = !InfAmmo;
+            }
+            if (inp.StartsWith("setammo"))
+            {
+                short ammotype = short.Parse(inp.Split(' ')[1]);
+
+                short ammoamount = short.Parse(inp.Split(' ')[2]);
+
+                long addr = baseAddress + 0x7B93C4 + (ammotype*2);
+                MemoryRead.WriteShort(processHandle, addr, ammoamount);
+
+            }
+            if (inp.StartsWith("setcoins"))
+            {
+                short amount = short.Parse(inp.Split(' ')[1]);
+
+
+                MemoryRead.WriteShort(processHandle, baseAddress + 0x7B9434, amount);
+
+            }
+            if (inp.StartsWith("sethp"))
+            {
+                short amount = short.Parse(inp.Split(' ')[1]);
+
+
+                MemoryRead.WriteShort(processHandle, baseAddress + 0x7B93BE, amount);
+
+            }
+            if (inp.StartsWith("up"))
+            {
+                List<Entity> entities = GetEntityList();
+                foreach (Entity ent in entities) 
+                {
+                    ent.UpdatePosition(processHandle);
+
+                    ent.SetPosition(processHandle, ent.x, ent.y, ent.z + 2.0f);
+                }
+            }
+            if (inp.StartsWith("spawn"))
+            {
+                SpawnEntity();
+            }
+            if (inp.StartsWith("model"))
+            {
+                var model = GetKomaruEntity().GetId(processHandle);
+
+                foreach (var ent in GetEntityList())
+                {
+                    ent.SetId(processHandle, model);
+                }
+
+            }
+            return false;
+        }
         public void Init()
         {
             Process process = MemoryRead.GetProcess("game");
@@ -93,21 +231,29 @@ namespace Launcher
             baseAddress = MemoryRead.GetProcessBaseAddress(process);
             main_thread = new Thread(new ThreadStart(Main_Loop));
             main_thread.Start();
+       
             while (true)
             {
-                string inp = Console.ReadLine();
-                if (inp == "quit")
+                var key = Console.ReadKey();
+            
+                if (key.Key == ConsoleKey.Backspace && tempinp.Length > 0)
                 {
-                    break;
+                    tempinp = tempinp.Substring(0, tempinp.Length - 1);
                 }
-                if (inp == "infhp")
+                else
                 {
-                    InfHealth = !InfHealth;
+                    tempinp += key.KeyChar;
                 }
-                if (inp == "infammo")
+                if (key.Key == ConsoleKey.Enter)
                 {
-                    InfAmmo = !InfAmmo;
+                    if (ProcessCommand(tempinp))
+                    {
+                        break;
+                    }
                 }
+
+
+
                 Thread.Sleep(10);
             }
             main_thread.Suspend();
