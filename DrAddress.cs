@@ -11,14 +11,14 @@ namespace Launcher
         public static long player_level_offset = 0x7B93BC;
         public static long player_health_offset = 0x7B93BE;
         public static long player_selected_ammo_offset = 0x7B93C2; // or 0x786658
-        public static long player_aiming_offset = 0x2E4498;
+        public static long player_aiming_offset = 0x2E4498; // byte that equals 1 or 0
 
-        public static long gun_ammo_start_offset = 0x7B93C4;
+        public static long gun_ammo_start_offset = 0x7B93C4; // Ammo for the break ammo, add 2 to the offset to go through each ammo amount
 
         public static long monocoins_offset =  0x7B9434; // or 0x786B64
 
 
-        public static long entity_list_length_offset = 0x7EC278;
+        public static long entity_list_length_offset = 0x7EC278; // Entity pointer entries (int 64) come after this
 
 
         // Pretty useless currently
