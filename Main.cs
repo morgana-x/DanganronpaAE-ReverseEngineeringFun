@@ -207,6 +207,16 @@ namespace Launcher
                 }
 
             }
+            if (inp.StartsWith("tp"))
+            {
+                var kom = GetKomaruEntity();
+
+                foreach (var ent in GetEntityList())
+                {
+                    ent.SetPosition(processHandle, kom.x, kom.y, kom.z);
+                }
+
+            }
             return false;
         }
         public void Init()
