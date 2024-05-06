@@ -16,11 +16,10 @@ namespace Launcher
 
         public long baseAddress;
         public bool InfHealth = false;
-        public bool InfAmmo = false;
 
         private long[] GetEntityPointers()
         {
-            long numberofLivingEntitiesAddress = baseAddress + 0x7EC278;
+            long numberofLivingEntitiesAddress = baseAddress + DrAddress.entity_list_length_offset;
             int numberOfLivingEntities = MemoryRead.ReadInt(processHandle, numberofLivingEntitiesAddress);
 
             long[] entityOffsets = new long[numberOfLivingEntities];
@@ -34,13 +33,17 @@ namespace Launcher
         }
         public List<Entity> GetEntityList()
         {
+            return GetEntityList(GetEntityPointers());
+
+        }
+        public List<Entity> GetEntityList(long[] entityPointers)
+        {
             List<Entity> entityList = new List<Entity>();
 
-            long[] entityPointers = GetEntityPointers();
 
             foreach (var x in entityPointers)
             {
-                entityList.Add(new Entity( x, processHandle));
+                entityList.Add(new Entity(x, processHandle));
             }
 
             return entityList;
@@ -48,7 +51,7 @@ namespace Launcher
         }
         public void SpawnEntity()
         {
-            long numberofLivingEntitiesAddress = baseAddress + 0x7EC278;
+            long numberofLivingEntitiesAddress = baseAddress + DrAddress.entity_list_length_offset;
             int numberOfLivingEntities = MemoryRead.ReadInt(processHandle, numberofLivingEntitiesAddress);
 
             long entityPointer = GetEntityPointers()[numberOfLivingEntities-1] + 11200;
@@ -65,83 +68,60 @@ namespace Launcher
         }
         public Entity GetKomaruEntity()
         {
-            return GetEntityList()[0];
+            return GetEntityList()[0]; // This is not right
         }
         public Entity GetFukawaEntity()
         {
-            return GetEntityList()[1];
+            return GetEntityList()[1]; // This is not right
         }
         public void Main_Loop_Main()
         {
 
-            long player_levelAddress = baseAddress + 0x7B93BC;
-            long healthAddress = baseAddress + 0x7B93BE;
-            long selectedGunAddress = baseAddress + 0x7B93C2; // or 0x786658
-            long monocoinsAddress = baseAddress + 0x7B9434; // or 0x786B64
-            long playerAimingAddress = baseAddress + 0x2E4498;
-
-            long numberofLivingEntitiesAddress = baseAddress + 0x7EC278;
-
-            long gunAmmo_type_break_address = baseAddress + 0x7B93C4;
-            long gunAmmo_type_knockback_address = baseAddress + 0x7B93CA;
-            long gunAmmo_type_dance_address = baseAddress + 0x7B93CC;
-            long gunAmmo_type_burn_address = baseAddress + 0x7B93C6;
-            long gunAmmo_type_paralyze_address = baseAddress + 0x7B93C8;
-            long gunAmmo_type_link_address = baseAddress + 0x7B93CE;
-
-            long target_posxAddress = baseAddress + 0x827130; // Not player pos, npc pathfinding target(?) towards komaru
-            long target_posyAddress = baseAddress + 0x827134; // Not player pos, npc pathfinding target(?) towards komaru
-            long target_poszAddress = baseAddress + 0x834938; // Not player pos, npc pathfinding target(?) towards komaru
-           // Console.WriteLine("Base Address: " + baseAddress);
-           // Console.WriteLine("Health Address: " + healthAddress);
-            float target_pos_x = MemoryRead.ReadFloat(processHandle, target_posxAddress); // Not player pos, npc pathfinding target(?) towards komaru
+            
+            /*float target_pos_x = MemoryRead.ReadFloat(processHandle, target_posxAddress); // Not player pos, npc pathfinding target(?) towards komaru
             float target_pos_y = MemoryRead.ReadFloat(processHandle, target_posyAddress); // Not player pos, npc pathfinding target(?) towards komaru
-            float target_pos_z = MemoryRead.ReadFloat(processHandle, target_poszAddress); // Not player pos, npc pathfinding target(?) towards komaru
+            float target_pos_z = MemoryRead.ReadFloat(processHandle, target_poszAddress); // Not player pos, npc pathfinding target(?) towards komaru*/
 
-            short health = MemoryRead.ReadShort(processHandle, healthAddress);
-            short player_level = MemoryRead.ReadShort(processHandle, player_levelAddress);
-            short selected_gun_type = MemoryRead.ReadShort(processHandle, selectedGunAddress);
-            short gun_ammo_break = MemoryRead.ReadShort(processHandle, gunAmmo_type_break_address);
-            short gun_ammo_dance = MemoryRead.ReadShort(processHandle, gunAmmo_type_dance_address);
-            short gun_ammo_knockback = MemoryRead.ReadShort(processHandle, gunAmmo_type_knockback_address);
-            short gun_ammo_paralyze = MemoryRead.ReadShort(processHandle, gunAmmo_type_paralyze_address);
-            short gun_ammo_burn = MemoryRead.ReadShort(processHandle, gunAmmo_type_burn_address);
-            short gun_ammo_link = MemoryRead.ReadShort(processHandle, gunAmmo_type_link_address);
-            int monocoins = MemoryRead.ReadInt(processHandle, monocoinsAddress);
+            short player_health = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.player_health_offset);
+            short player_level = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.player_level_offset);
+            short player_selected_ammo = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.player_selected_ammo_offset);
 
             byte[] aimBuffer = new byte[1];
-            MemoryRead.ReadMemory(processHandle, playerAimingAddress, ref aimBuffer);
+            MemoryRead.ReadMemory(processHandle, baseAddress + DrAddress.player_aiming_offset, ref aimBuffer);
             bool player_aiming = (aimBuffer[0] == 1);
 
-            int numberOfLivingEntities = MemoryRead.ReadInt(processHandle, numberofLivingEntitiesAddress);
-            //Console.WriteLine("NPC Target Position: " + "\n \t" + "x: " + target_pos_x + "\n \t" + "y: " + target_pos_y + "\n \t" + "z: " + target_pos_z);
+
+            int monocoins = MemoryRead.ReadInt(processHandle, baseAddress + DrAddress.monocoins_offset);
+
+            
+
+
             Console.SetCursorPosition(0,0);
             var (cx, cy) = Console.GetCursorPosition();
             Console.Clear();
             Console.WriteLine("Level: " + player_level);
-            Console.WriteLine("Health: " + health);
-            Console.WriteLine("Selected Gun: " + selected_gun_type);
+            Console.WriteLine("Health: " + player_health);
+            Console.WriteLine("Selected Gun: " + player_selected_ammo);
             Console.WriteLine("Aiming: " + player_aiming);
             for (int i=0; i < 8; i++)
             {
-                short amount = MemoryRead.ReadShort(processHandle, gunAmmo_type_break_address + (i * 2));
+                short amount = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.gun_ammo_start_offset + (i * 2));
 
                 Console.WriteLine("Ammo[" + i + "]: " + amount + (amount == -2 ? " (Unlimited)" : "") + (amount == -1 ? " (Disabled)" : ""));
             }
             Console.WriteLine("Monocoins: " + monocoins);
-            Console.WriteLine("Number of entities (not counting coins): " + numberOfLivingEntities);
-            Console.WriteLine("Entity Pointers:\n[\t" + string.Join("\n[\t", GetEntityPointers()));
-            Console.WriteLine("Entity List: \n" + string.Join("\n", GetEntityList()));
+
+            long[] pointers = GetEntityPointers();
+            Console.WriteLine("Number of entities (not counting coins): " + pointers.Length);
+            Console.WriteLine("Entity Pointers:\n[\t" + string.Join("\n[\t", pointers));
+            Console.WriteLine("Entity List: \n" + string.Join("\n", GetEntityList(pointers)));
             Console.WriteLine(new string ('\n', 4) + tempinp);
 
             if (InfHealth)
             {
-                MemoryRead.WriteShort(processHandle, healthAddress, 3);
+                MemoryRead.WriteShort(processHandle, baseAddress + DrAddress.player_health_offset, 3);
             }
-            if (InfAmmo)
-            {
-                MemoryRead.WriteShort(processHandle, gunAmmo_type_break_address, 99);
-            }
+
         }
         public void Main_Loop()
         {
@@ -170,7 +150,12 @@ namespace Launcher
             }
             if (inp == "infammo")
             {
-                InfAmmo = !InfAmmo;
+                for (int i = 0; i < 8; i++)
+                {
+                    long addr = baseAddress + DrAddress.gun_ammo_start_offset + (i * 2);
+                    MemoryRead.WriteShort(processHandle, addr, -2);
+                    Thread.Sleep(10);
+                }
             }
             if (inp.StartsWith("setammo"))
             {
@@ -178,7 +163,7 @@ namespace Launcher
 
                 short ammoamount = short.Parse(inp.Split(' ')[2]);
 
-                long addr = baseAddress + 0x7B93C4 + (ammotype*2);
+                long addr = baseAddress + DrAddress.gun_ammo_start_offset + (ammotype*2);
                 MemoryRead.WriteShort(processHandle, addr, ammoamount);
 
             }
@@ -187,7 +172,7 @@ namespace Launcher
                 short amount = short.Parse(inp.Split(' ')[1]);
 
 
-                MemoryRead.WriteShort(processHandle, baseAddress + 0x7B9434, amount);
+                MemoryRead.WriteShort(processHandle, baseAddress + DrAddress.monocoins_offset, amount);
 
             }
             if (inp.StartsWith("sethp"))
@@ -195,7 +180,7 @@ namespace Launcher
                 short amount = short.Parse(inp.Split(' ')[1]);
 
 
-                MemoryRead.WriteShort(processHandle, baseAddress + 0x7B93BE, amount);
+                MemoryRead.WriteShort(processHandle, baseAddress + DrAddress.player_health_offset, amount);
 
             }
             if (inp.StartsWith("up"))
