@@ -49,14 +49,14 @@ namespace Launcher
             return entityList;
 
         }
-        public void SpawnEntity()
+        public void SpawnEntity() // Todo: find ingame function for spawning entities
         {
             long numberofLivingEntitiesAddress = baseAddress + DrAddress.entity_list_length_offset;
             int numberOfLivingEntities = MemoryRead.ReadInt(processHandle, numberofLivingEntitiesAddress);
 
-            long entityPointer = GetEntityPointers()[numberOfLivingEntities-1] + 11200;
+            long entityPointer = GetEntityPointers()[numberOfLivingEntities-1];
 
-            byte[] kotoMaruData = new byte[11200];
+            byte[] kotoMaruData = new byte[1000];
             MemoryRead.ReadMemory(processHandle, GetEntityPointers()[0], ref kotoMaruData);
 
 
