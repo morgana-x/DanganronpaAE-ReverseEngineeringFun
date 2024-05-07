@@ -94,17 +94,4 @@ public class MemoryRead
         IntPtr processHandle = OpenProcess(PROCESS_ALL_ACCESS, false, process.Id);
         return (int)processHandle;
     }
-    /*public static void Main()
-    {
-
-        Process process = Process.GetProcessesByName("game.exe")[0];
-        IntPtr processHandle = OpenProcess(PROCESS_ALL_ACCESS, false, process.Id);
-
-        int bytesWritten = 0;
-        byte[] buffer = Encoding.Unicode.GetBytes("It works!\0"); // '\0' marks the end of string
-
-        // replace 0x0046A3B8 with your address
-        WriteProcessMemory((int)processHandle, 0x0046A3B8, buffer, buffer.Length, ref bytesWritten);
-        Console.ReadLine();
-    }*/
 }

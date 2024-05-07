@@ -31,10 +31,18 @@ namespace Launcher
 
             return entityOffsets;
         }
+
+        public Entity GetEntityFromPointer(long pointer)
+        {
+            return new Entity(pointer, processHandle);
+        }
+        public Entity GetEntityFromId(int id)
+        {
+            return GetEntityFromPointer(GetEntityPointers()[id]);
+        }
         public List<Entity> GetEntityList()
         {
             return GetEntityList(GetEntityPointers());
-
         }
         public List<Entity> GetEntityList(long[] entityPointers)
         {
@@ -51,20 +59,8 @@ namespace Launcher
         }
         public void SpawnEntity() // Todo: find ingame function for spawning entities
         {
-            long numberofLivingEntitiesAddress = baseAddress + DrAddress.entity_list_length_offset;
-            int numberOfLivingEntities = MemoryRead.ReadInt(processHandle, numberofLivingEntitiesAddress);
-
-            long entityPointer = GetEntityPointers()[numberOfLivingEntities-1];
-
-            byte[] kotoMaruData = new byte[1000];
-            MemoryRead.ReadMemory(processHandle, GetEntityPointers()[0], ref kotoMaruData);
-
-
-            MemoryRead.WriteMemory(processHandle, entityPointer, kotoMaruData);
-
-            MemoryRead.WriteLong(processHandle, numberofLivingEntitiesAddress + (8 * ( (numberOfLivingEntities) + 1)), entityPointer);
-
-            MemoryRead.WriteInt(processHandle, numberofLivingEntitiesAddress, numberOfLivingEntities + 1);
+            RemoteFunction.ExecuteFunction(processHandle, baseAddress + DrAddress.add_entity_func_pointer_offset);
+   
         }
         public Entity GetKomaruEntity()
         {
@@ -90,19 +86,31 @@ namespace Launcher
             MemoryRead.ReadMemory(processHandle, baseAddress + DrAddress.player_aiming_offset, ref aimBuffer);
             bool player_aiming = (aimBuffer[0] == 1);
 
+            byte[] isGenocideBuffer = new byte[1];
+            MemoryRead.ReadMemory(processHandle, baseAddress + DrAddress.player_genocider_jack_mode, ref isGenocideBuffer);
+            bool player_genocider_jack = (isGenocideBuffer[0] == 1);
 
             int monocoins = MemoryRead.ReadInt(processHandle, baseAddress + DrAddress.monocoins_offset);
 
             
 
 
-            Console.SetCursorPosition(0,0);
+          
             var (cx, cy) = Console.GetCursorPosition();
-            Console.Clear();
+            //Console.Clear();
+            string clearConsole = "";
+            for (int i=0 ; i < 150; i++)
+            {
+                clearConsole += new string('\t', 25) + "\n";
+            }
+            Console.SetCursorPosition(0, 0);
+            Console.Write(clearConsole);
+            Console.SetCursorPosition(0, 0);
             Console.WriteLine("Level: " + player_level);
             Console.WriteLine("Health: " + player_health);
             Console.WriteLine("Selected Gun: " + player_selected_ammo);
             Console.WriteLine("Aiming: " + player_aiming);
+            Console.WriteLine("Is Genocider Jack/Jill : " + player_genocider_jack);
             for (int i=0; i < 8; i++)
             {
                 short amount = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.gun_ammo_start_offset + (i * 2));
@@ -114,9 +122,9 @@ namespace Launcher
             long[] pointers = GetEntityPointers();
             Console.WriteLine("Number of entities (not counting coins): " + pointers.Length);
             Console.WriteLine("Entity Pointers:\n[\t" + string.Join("\n[\t", pointers));
-            Console.WriteLine("Entity List: \n" + string.Join("\n", GetEntityList(pointers)));
-            Console.WriteLine(new string ('\n', 4) + tempinp);
-
+            //Console.WriteLine("Entity List: \n" + string.Join("\n", GetEntityList(pointers)));
+            Console.WriteLine( tempinp);
+            Console.SetCursorPosition(cx, cy);
             if (InfHealth)
             {
                 MemoryRead.WriteShort(processHandle, baseAddress + DrAddress.player_health_offset, 3);
