@@ -93,11 +93,7 @@ namespace Launcher
             {
                 return;
             }
-            nextDrawConsole = Runtime.CurrentRuntime + 50;
-  
-            /*float target_pos_x = MemoryRead.ReadFloat(processHandle, target_posxAddress); // Not player pos, npc pathfinding target(?) towards komaru
-            float target_pos_y = MemoryRead.ReadFloat(processHandle, target_posyAddress); // Not player pos, npc pathfinding target(?) towards komaru
-            float target_pos_z = MemoryRead.ReadFloat(processHandle, target_poszAddress); // Not player pos, npc pathfinding target(?) towards komaru*/
+            nextDrawConsole = Runtime.CurrentRuntime + 100;
 
             short player_health = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.player_health_offset);
             short player_level = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.player_level_offset);
@@ -115,38 +111,40 @@ namespace Launcher
           
             var (cx, cy) = Console.GetCursorPosition();
             //Console.Clear();
-            string clearConsole = "";
-            for (int i=0 ; i < 150; i++)
-            {
-                clearConsole += new string('\t', 25) + "\n";
-            }
+      
             Console.SetCursorPosition(0, 0);
             Console.Write(clearConsole);
             Console.SetCursorPosition(0, 0);
             Console.WriteLine("Current Level / Map id? " + level_id_major + " : " + level_id_minor);
             Console.WriteLine("Player Level: " + player_level);
+            Console.WriteLine("Monocoins: " + monocoins);
             Console.WriteLine("Health: " + player_health);
+
+            Console.WriteLine("Is Genocider Jill : " + player_genocider_jack);
+            Console.WriteLine("Noclip active: " + noclip.Active);
             Console.WriteLine("Selected Gun: " + player_selected_ammo);
             Console.WriteLine("Aiming: " + player_aiming);
-            Console.WriteLine("Is Genocider Jill : " + player_genocider_jack);
+
             for (int i=0; i < 8; i++)
             {
                 short amount = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.gun_ammo_start_offset + (i * 2));
 
                 Console.WriteLine("Ammo[" + i + "]: " + amount + (amount == -2 ? " (Unlimited)" : "") + (amount == -1 ? " (Disabled)" : ""));
             }
-            Console.WriteLine("Monocoins: " + monocoins);
+
 
             long[] pointers = GetEntityPointers();
 
             Console.WriteLine("Number of entities (not counting coins): " + pointers.Length);
             Console.WriteLine("Entity Pointers:\n[\t" + string.Join("\n[\t", pointers));
-            Console.WriteLine("Entity List: \n" + string.Join("\n", GetEntityList(pointers)));
+            if (pointers.Length < 10) // Change if you wish, just that the way console is refreshed is bad! and will mess up your view!
+            {
+                Console.WriteLine("Entity List: \n" + string.Join("\n", GetEntityList(pointers)));
+            }
 
-            Console.WriteLine("Noclip active: " + noclip.Active);
-           // Console.WriteLine("Noclip debug: " + noclip.debug);
+  
            
-            Console.WriteLine( tempinp);
+            Console.WriteLine("\nInput: " + tempinp);
             Console.SetCursorPosition(cx, cy);
    
 
@@ -166,7 +164,7 @@ namespace Launcher
 
         }
         string tempinp = "";
-
+        string clearConsole = "";
         private bool ProcessCommand(string inp)
         {
             if (inp != "")
@@ -260,7 +258,15 @@ namespace Launcher
             processId = process.Id;
             processHandle = MemoryRead.GetProcessHandle(process);
             baseAddress = MemoryRead.GetProcessBaseAddress(process);
-           
+
+
+            clearConsole = "";
+            for (int i = 0; i < 200; i++)
+            {
+                clearConsole += new string('\t', 30) + "\n";
+            }
+
+
             main_thread = new Thread(new ThreadStart(Main_Loop));
             main_thread.Start();
             noclip = new Noclip(this);
