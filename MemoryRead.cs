@@ -18,7 +18,8 @@ public class MemoryRead
     [DllImport("kernel32.dll", SetLastError = true)]
     public static extern bool ReadProcessMemory(int hProcess, long lpBaseAddress, byte[] lpBuffer, int dwSize, ref int lpNumberOfBytesRead);
 
-
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
 
     public static int ReadMemory(int processHandle, long addr, ref byte[] buffer)
     {
@@ -93,5 +94,9 @@ public class MemoryRead
     {
         IntPtr processHandle = OpenProcess(PROCESS_ALL_ACCESS, false, process.Id);
         return (int)processHandle;
+    }
+    public static bool IsWindowFocused(int procId)
+    {
+        return GetForegroundWindow() == procId;
     }
 }

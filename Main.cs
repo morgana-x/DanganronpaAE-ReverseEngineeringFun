@@ -12,12 +12,21 @@ namespace Launcher
     {
         private Thread main_thread;
 
+        public Process process;
+
         public int processHandle;
+
+        public int processId;
 
         public long baseAddress;
         public bool InfHealth = false;
 
-        private long[] GetEntityPointers()
+        public int GetNumberOfEntities()
+        {
+            long numberofLivingEntitiesAddress = baseAddress + DrAddress.entity_list_length_offset;
+            return  MemoryRead.ReadInt(processHandle, numberofLivingEntitiesAddress);
+        }
+        public long[] GetEntityPointers()
         {
             long numberofLivingEntitiesAddress = baseAddress + DrAddress.entity_list_length_offset;
             int numberOfLivingEntities = MemoryRead.ReadInt(processHandle, numberofLivingEntitiesAddress);
@@ -70,10 +79,22 @@ namespace Launcher
         {
             return GetEntityList()[1]; // This is not right
         }
-        public void Main_Loop_Main()
-        {
 
-            
+        long nextDrawConsole = 0;
+        public void Main_Loop_Main(float curTime)
+        {
+            noclip.Tick(curTime);
+            if (InfHealth)
+            {
+                MemoryRead.WriteShort(processHandle, baseAddress + DrAddress.player_health_offset, 3);
+            }
+
+            if (Runtime.CurrentRuntime < nextDrawConsole)
+            {
+                return;
+            }
+            nextDrawConsole = Runtime.CurrentRuntime + 50;
+  
             /*float target_pos_x = MemoryRead.ReadFloat(processHandle, target_posxAddress); // Not player pos, npc pathfinding target(?) towards komaru
             float target_pos_y = MemoryRead.ReadFloat(processHandle, target_posyAddress); // Not player pos, npc pathfinding target(?) towards komaru
             float target_pos_z = MemoryRead.ReadFloat(processHandle, target_poszAddress); // Not player pos, npc pathfinding target(?) towards komaru*/
@@ -122,21 +143,26 @@ namespace Launcher
             long[] pointers = GetEntityPointers();
             Console.WriteLine("Number of entities (not counting coins): " + pointers.Length);
             Console.WriteLine("Entity Pointers:\n[\t" + string.Join("\n[\t", pointers));
+
+            Console.WriteLine("Noclip active: " + noclip.Active);
+           // Console.WriteLine("Noclip debug: " + noclip.debug);
             //Console.WriteLine("Entity List: \n" + string.Join("\n", GetEntityList(pointers)));
             Console.WriteLine( tempinp);
             Console.SetCursorPosition(cx, cy);
-            if (InfHealth)
-            {
-                MemoryRead.WriteShort(processHandle, baseAddress + DrAddress.player_health_offset, 3);
-            }
+   
 
         }
         public void Main_Loop()
         {
+            float curTime = 0;
+            Stopwatch sw = new Stopwatch();
             while (true)
             {
-                Main_Loop_Main();
-                Thread.Sleep(10);
+                sw.Restart();
+                Main_Loop_Main(curTime);
+                sw.Stop();
+                curTime = (float)sw.Elapsed.TotalSeconds;
+  
             }
 
         }
@@ -162,7 +188,7 @@ namespace Launcher
                 {
                     long addr = baseAddress + DrAddress.gun_ammo_start_offset + (i * 2);
                     MemoryRead.WriteShort(processHandle, addr, -2);
-                    Thread.Sleep(10);
+                   // Thread.Sleep(10);
                 }
             }
             if (inp.StartsWith("setammo"))
@@ -227,14 +253,20 @@ namespace Launcher
             }
             return false;
         }
+
+        Noclip noclip;
         public void Init()
         {
-            Process process = MemoryRead.GetProcess("game");
+            process = MemoryRead.GetProcess("game");
+            processId = process.Id;
             processHandle = MemoryRead.GetProcessHandle(process);
             baseAddress = MemoryRead.GetProcessBaseAddress(process);
             main_thread = new Thread(new ThreadStart(Main_Loop));
             main_thread.Start();
-       
+            noclip = new Noclip(this);
+           
+
+
             while (true)
             {
                 var key = Console.ReadKey();
