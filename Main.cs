@@ -103,17 +103,13 @@ namespace Launcher
             short player_level = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.player_level_offset);
             short player_selected_ammo = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.player_selected_ammo_offset);
 
-            byte[] aimBuffer = new byte[1];
-            MemoryRead.ReadMemory(processHandle, baseAddress + DrAddress.player_aiming_offset, ref aimBuffer);
-            bool player_aiming = (aimBuffer[0] == 1);
-
-            byte[] isGenocideBuffer = new byte[1];
-            MemoryRead.ReadMemory(processHandle, baseAddress + DrAddress.player_genocider_jack_mode, ref isGenocideBuffer);
-            bool player_genocider_jack = (isGenocideBuffer[0] == 1);
+            bool player_aiming = MemoryRead.ReadByte(processHandle, baseAddress + DrAddress.player_aiming_offset) == 1;
+            bool player_genocider_jack = MemoryRead.ReadByte(processHandle, baseAddress + DrAddress.player_genocider_jack_mode) == 1;
 
             int monocoins = MemoryRead.ReadInt(processHandle, baseAddress + DrAddress.monocoins_offset);
 
-            
+            int level_id_major = MemoryRead.ReadInt(processHandle, baseAddress + DrAddress.level_major_id_offset);
+            int level_id_minor = MemoryRead.ReadInt(processHandle, baseAddress + DrAddress.level_minor_id_offset);
 
 
           
@@ -127,11 +123,12 @@ namespace Launcher
             Console.SetCursorPosition(0, 0);
             Console.Write(clearConsole);
             Console.SetCursorPosition(0, 0);
-            Console.WriteLine("Level: " + player_level);
+            Console.WriteLine("Current Level / Map id? " + level_id_major + " : " + level_id_minor);
+            Console.WriteLine("Player Level: " + player_level);
             Console.WriteLine("Health: " + player_health);
             Console.WriteLine("Selected Gun: " + player_selected_ammo);
             Console.WriteLine("Aiming: " + player_aiming);
-            Console.WriteLine("Is Genocider Jack/Jill : " + player_genocider_jack);
+            Console.WriteLine("Is Genocider Jill : " + player_genocider_jack);
             for (int i=0; i < 8; i++)
             {
                 short amount = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.gun_ammo_start_offset + (i * 2));
@@ -141,12 +138,14 @@ namespace Launcher
             Console.WriteLine("Monocoins: " + monocoins);
 
             long[] pointers = GetEntityPointers();
+
             Console.WriteLine("Number of entities (not counting coins): " + pointers.Length);
             Console.WriteLine("Entity Pointers:\n[\t" + string.Join("\n[\t", pointers));
+            Console.WriteLine("Entity List: \n" + string.Join("\n", GetEntityList(pointers)));
 
             Console.WriteLine("Noclip active: " + noclip.Active);
            // Console.WriteLine("Noclip debug: " + noclip.debug);
-            //Console.WriteLine("Entity List: \n" + string.Join("\n", GetEntityList(pointers)));
+           
             Console.WriteLine( tempinp);
             Console.SetCursorPosition(cx, cy);
    
@@ -261,6 +260,7 @@ namespace Launcher
             processId = process.Id;
             processHandle = MemoryRead.GetProcessHandle(process);
             baseAddress = MemoryRead.GetProcessBaseAddress(process);
+           
             main_thread = new Thread(new ThreadStart(Main_Loop));
             main_thread.Start();
             noclip = new Noclip(this);

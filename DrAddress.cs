@@ -34,6 +34,11 @@ namespace Launcher
         public static long camera_pos_z_offset = 0x802CCC; // Rotation etc comes after positions, might do later if bothered!
 
 
+
+        public static long level_major_id_offset = 0x2FE7E0; // NOT CERTAIN, COULD BE SOMETHING ELSE
+        public static long level_minor_id_offset = 0x765F80; // NOT CERTAIN, COULD BE SOMETHING ELSE
+
+
         // Pretty useless currently
         /* public static long target_posxAddress =  0x827130; // Not player pos, npc pathfinding target(?) towards komaru
          public static long target_posyAddress = 0x827134; // Not player pos, npc pathfinding target(?) towards komaru

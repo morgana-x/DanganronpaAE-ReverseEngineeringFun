@@ -36,7 +36,17 @@ public class MemoryRead
         return bytesWritten;
     }
 
+    public static byte ReadByte(int processHandle, long addr)
+    {
+        byte[] buffer = new byte[1];
+        ReadMemory(processHandle, addr, ref buffer);
+        return buffer[0];
+    }
+    public static void WriteByte(int processHandle, long addr, byte value)
+    {
 
+        WriteMemory(processHandle, addr, new byte[1] {value});
+    }
     public static float ReadFloat(int processHandle, long addr)
     {
         byte[] buffer = new byte[4];
