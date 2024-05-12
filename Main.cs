@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace Launcher
 {
-    internal class Main
+    public class Main
     {
         private Thread main_thread;
 
@@ -21,6 +21,8 @@ namespace Launcher
         public long baseAddress;
         public bool InfHealth = false;
 
+
+        public string debugLog = "";
         public int GetNumberOfEntities()
         {
             long numberofLivingEntitiesAddress = baseAddress + DrAddress.entity_list_length_offset;
@@ -66,240 +68,259 @@ namespace Launcher
             return entityList;
 
         }
-        public void SpawnEntity() // Todo: find ingame function for spawning entities
+        public void SpawnEntity(int id) // Todo: find ingame function for spawning entities
         {
-            RemoteFunction.ExecuteFunction(processHandle, baseAddress + DrAddress.add_entity_func_pointer_offset);
-   
-        }
-        public Entity GetKomaruEntity()
+            debugLog += "\nSpawning entity!\n";
+            /*  48 B8 9D 13 D4 81 F7 7F 00 00  mov rax, 0x7FF781D4139D ; move the address 0x7FF781D4139D to rax
+            FF D0                          call rax                ; call the value stored in rax registry
+            C3                             retn                    ; returns, without this opcode the process will crash
+            */
+            /*RemoteFunction.ExecuteAssembly(processHandle,
+
+            new byte[]{
+                0x48, 0xB8, (byte)id, // ; move id to RAX
+                0x48, // ; move ??? address to RBX, for now we'll go with 00000251F81CA190
+                0x48, 0x8B,// ; move ??? address to RCX, for now we'll go with 00000251F81CA190
+                0x48, // ; move ??? address to RSI, for now we'll go with 00000251F99787E8
+                0x48, 0xB8, (byte)id, // ; move id to RDI
+                0x48, // ; move ??? to RSP, for now we'll go with 000000A0FBCFF628
+                0x48, // ; move ??? to R14, for now we'll go with 0000000000007025
+                0x48, // ; move ??? to RIP, for now we'll go with 00007FF7340A8770
+            }, 
+            this);*/
+            RemoteFunction.ExecuteFunction(processHandle, baseAddress + DrAddress.add_entity_func_pointer_offset, this);
+
+}
+public Entity GetKomaruEntity()
+{
+return GetEntityList()[0]; // This is not right
+}
+public Entity GetFukawaEntity()
+{
+return GetEntityList()[1]; // This is not right
+}
+
+long nextDrawConsole = 0;
+public void Main_Loop_Main(float curTime)
+{
+noclip.Tick(curTime);
+if (InfHealth)
+{
+    MemoryRead.WriteShort(processHandle, baseAddress + DrAddress.player_health_offset, 3);
+}
+
+if (Runtime.CurrentRuntime < nextDrawConsole)
+{
+    return;
+}
+nextDrawConsole = Runtime.CurrentRuntime + 100;
+
+short player_health = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.player_health_offset);
+short player_level = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.player_level_offset);
+short player_selected_ammo = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.player_selected_ammo_offset);
+
+bool player_aiming = MemoryRead.ReadByte(processHandle, baseAddress + DrAddress.player_aiming_offset) == 1;
+bool player_genocider_jack = MemoryRead.ReadByte(processHandle, baseAddress + DrAddress.player_genocider_jack_mode) == 1;
+
+int monocoins = MemoryRead.ReadInt(processHandle, baseAddress + DrAddress.monocoins_offset);
+
+int level_id_major = MemoryRead.ReadInt(processHandle, baseAddress + DrAddress.level_major_id_offset);
+int level_id_minor = MemoryRead.ReadInt(processHandle, baseAddress + DrAddress.level_minor_id_offset);
+
+
+
+var (cx, cy) = Console.GetCursorPosition();
+//Console.Clear();
+
+Console.SetCursorPosition(0, 0);
+Console.Write(clearConsole);
+Console.SetCursorPosition(0, 0);
+Console.WriteLine("Current Level / Map id? " + level_id_major + " : " + level_id_minor);
+Console.WriteLine("Player Level: " + player_level);
+Console.WriteLine("Monocoins: " + monocoins);
+Console.WriteLine("Health: " + player_health);
+
+Console.WriteLine("Is Genocider Jill : " + player_genocider_jack);
+Console.WriteLine("Noclip active: " + noclip.Active);
+Console.WriteLine("Selected Gun: " + player_selected_ammo);
+Console.WriteLine("Aiming: " + player_aiming);
+
+for (int i=0; i < 8; i++)
+{
+    short amount = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.gun_ammo_start_offset + (i * 2));
+
+    Console.WriteLine("Ammo[" + i + "]: " + amount + (amount == -2 ? " (Unlimited)" : "") + (amount == -1 ? " (Disabled)" : ""));
+}
+
+
+long[] pointers = GetEntityPointers();
+
+Console.WriteLine("Number of entities (not counting coins): " + pointers.Length);
+Console.WriteLine("Entity Pointers:\n[\t" + string.Join("\n[\t", pointers));
+if (pointers.Length < 10) // Change if you wish, just that the way console is refreshed is bad! and will mess up your view!
+{
+    Console.WriteLine("Entity List: \n" + string.Join("\n", GetEntityList(pointers)));
+}
+
+
+
+Console.WriteLine("\nInput: " + tempinp);
+Console.WriteLine(debugLog);
+Console.SetCursorPosition(cx, cy);
+
+
+}
+public void Main_Loop()
+{
+float curTime = 0;
+Stopwatch sw = new Stopwatch();
+while (true)
+{
+    sw.Restart();
+    Main_Loop_Main(curTime);
+    sw.Stop();
+    curTime = (float)sw.Elapsed.TotalSeconds;
+
+}
+
+}
+string tempinp = "";
+string clearConsole = "";
+private bool ProcessCommand(string inp)
+{
+if (inp != "")
+{
+    tempinp = "";
+}
+if (inp == "quit")
+{
+    return true;
+}
+if (inp == "infhp")
+{
+    InfHealth = !InfHealth;
+}
+if (inp == "infammo")
+{
+    for (int i = 0; i < 8; i++)
+    {
+        long addr = baseAddress + DrAddress.gun_ammo_start_offset + (i * 2);
+        MemoryRead.WriteShort(processHandle, addr, -2);
+       // Thread.Sleep(10);
+    }
+}
+if (inp.StartsWith("setammo"))
+{
+    short ammotype = short.Parse(inp.Split(' ')[1]);
+
+    short ammoamount = short.Parse(inp.Split(' ')[2]);
+
+    long addr = baseAddress + DrAddress.gun_ammo_start_offset + (ammotype*2);
+    MemoryRead.WriteShort(processHandle, addr, ammoamount);
+
+}
+if (inp.StartsWith("setcoins"))
+{
+    short amount = short.Parse(inp.Split(' ')[1]);
+
+
+    MemoryRead.WriteShort(processHandle, baseAddress + DrAddress.monocoins_offset, amount);
+
+}
+if (inp.StartsWith("sethp"))
+{
+    short amount = short.Parse(inp.Split(' ')[1]);
+
+
+    MemoryRead.WriteShort(processHandle, baseAddress + DrAddress.player_health_offset, amount);
+
+}
+if (inp.StartsWith("up"))
+{
+    List<Entity> entities = GetEntityList();
+    foreach (Entity ent in entities) 
+    {
+        ent.UpdatePosition(processHandle);
+
+        ent.SetPosition(processHandle, ent.x, ent.y, ent.z + 2.0f);
+    }
+}
+if (inp.StartsWith("spawn"))
+{
+    SpawnEntity(4);
+}
+if (inp.StartsWith("model"))
+{
+    var model = GetKomaruEntity().GetId(processHandle);
+
+    foreach (var ent in GetEntityList())
+    {
+        ent.SetId(processHandle, model);
+    }
+
+}
+if (inp.StartsWith("tp"))
+{
+    var kom = GetKomaruEntity();
+
+    foreach (var ent in GetEntityList())
+    {
+        ent.SetPosition(processHandle, kom.x, kom.y, kom.z);
+    }
+
+}
+return false;
+}
+
+Noclip noclip;
+public void Init()
+{
+process = MemoryRead.GetProcess("game");
+processId = process.Id;
+processHandle = MemoryRead.GetProcessHandle(process);
+baseAddress = MemoryRead.GetProcessBaseAddress(process);
+
+
+clearConsole = "";
+for (int i = 0; i < 200; i++)
+{
+    clearConsole += new string('\t', 30) + "\n";
+}
+
+
+main_thread = new Thread(new ThreadStart(Main_Loop));
+main_thread.Start();
+noclip = new Noclip(this);
+
+
+
+while (true)
+{
+    var key = Console.ReadKey();
+
+    if (key.Key == ConsoleKey.Backspace && tempinp.Length > 0)
+    {
+        tempinp = tempinp.Substring(0, tempinp.Length - 1);
+    }
+    else
+    {
+        tempinp += key.KeyChar;
+    }
+    if (key.Key == ConsoleKey.Enter)
+    {
+        if (ProcessCommand(tempinp))
         {
-            return GetEntityList()[0]; // This is not right
-        }
-        public Entity GetFukawaEntity()
-        {
-            return GetEntityList()[1]; // This is not right
-        }
-
-        long nextDrawConsole = 0;
-        public void Main_Loop_Main(float curTime)
-        {
-            noclip.Tick(curTime);
-            if (InfHealth)
-            {
-                MemoryRead.WriteShort(processHandle, baseAddress + DrAddress.player_health_offset, 3);
-            }
-
-            if (Runtime.CurrentRuntime < nextDrawConsole)
-            {
-                return;
-            }
-            nextDrawConsole = Runtime.CurrentRuntime + 100;
-
-            short player_health = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.player_health_offset);
-            short player_level = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.player_level_offset);
-            short player_selected_ammo = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.player_selected_ammo_offset);
-
-            bool player_aiming = MemoryRead.ReadByte(processHandle, baseAddress + DrAddress.player_aiming_offset) == 1;
-            bool player_genocider_jack = MemoryRead.ReadByte(processHandle, baseAddress + DrAddress.player_genocider_jack_mode) == 1;
-
-            int monocoins = MemoryRead.ReadInt(processHandle, baseAddress + DrAddress.monocoins_offset);
-
-            int level_id_major = MemoryRead.ReadInt(processHandle, baseAddress + DrAddress.level_major_id_offset);
-            int level_id_minor = MemoryRead.ReadInt(processHandle, baseAddress + DrAddress.level_minor_id_offset);
-
-
-          
-            var (cx, cy) = Console.GetCursorPosition();
-            //Console.Clear();
-      
-            Console.SetCursorPosition(0, 0);
-            Console.Write(clearConsole);
-            Console.SetCursorPosition(0, 0);
-            Console.WriteLine("Current Level / Map id? " + level_id_major + " : " + level_id_minor);
-            Console.WriteLine("Player Level: " + player_level);
-            Console.WriteLine("Monocoins: " + monocoins);
-            Console.WriteLine("Health: " + player_health);
-
-            Console.WriteLine("Is Genocider Jill : " + player_genocider_jack);
-            Console.WriteLine("Noclip active: " + noclip.Active);
-            Console.WriteLine("Selected Gun: " + player_selected_ammo);
-            Console.WriteLine("Aiming: " + player_aiming);
-
-            for (int i=0; i < 8; i++)
-            {
-                short amount = MemoryRead.ReadShort(processHandle, baseAddress + DrAddress.gun_ammo_start_offset + (i * 2));
-
-                Console.WriteLine("Ammo[" + i + "]: " + amount + (amount == -2 ? " (Unlimited)" : "") + (amount == -1 ? " (Disabled)" : ""));
-            }
-
-
-            long[] pointers = GetEntityPointers();
-
-            Console.WriteLine("Number of entities (not counting coins): " + pointers.Length);
-            Console.WriteLine("Entity Pointers:\n[\t" + string.Join("\n[\t", pointers));
-            if (pointers.Length < 10) // Change if you wish, just that the way console is refreshed is bad! and will mess up your view!
-            {
-                Console.WriteLine("Entity List: \n" + string.Join("\n", GetEntityList(pointers)));
-            }
-
-  
-           
-            Console.WriteLine("\nInput: " + tempinp);
-            Console.SetCursorPosition(cx, cy);
-   
-
-        }
-        public void Main_Loop()
-        {
-            float curTime = 0;
-            Stopwatch sw = new Stopwatch();
-            while (true)
-            {
-                sw.Restart();
-                Main_Loop_Main(curTime);
-                sw.Stop();
-                curTime = (float)sw.Elapsed.TotalSeconds;
-  
-            }
-
-        }
-        string tempinp = "";
-        string clearConsole = "";
-        private bool ProcessCommand(string inp)
-        {
-            if (inp != "")
-            {
-                tempinp = "";
-            }
-            if (inp == "quit")
-            {
-                return true;
-            }
-            if (inp == "infhp")
-            {
-                InfHealth = !InfHealth;
-            }
-            if (inp == "infammo")
-            {
-                for (int i = 0; i < 8; i++)
-                {
-                    long addr = baseAddress + DrAddress.gun_ammo_start_offset + (i * 2);
-                    MemoryRead.WriteShort(processHandle, addr, -2);
-                   // Thread.Sleep(10);
-                }
-            }
-            if (inp.StartsWith("setammo"))
-            {
-                short ammotype = short.Parse(inp.Split(' ')[1]);
-
-                short ammoamount = short.Parse(inp.Split(' ')[2]);
-
-                long addr = baseAddress + DrAddress.gun_ammo_start_offset + (ammotype*2);
-                MemoryRead.WriteShort(processHandle, addr, ammoamount);
-
-            }
-            if (inp.StartsWith("setcoins"))
-            {
-                short amount = short.Parse(inp.Split(' ')[1]);
-
-
-                MemoryRead.WriteShort(processHandle, baseAddress + DrAddress.monocoins_offset, amount);
-
-            }
-            if (inp.StartsWith("sethp"))
-            {
-                short amount = short.Parse(inp.Split(' ')[1]);
-
-
-                MemoryRead.WriteShort(processHandle, baseAddress + DrAddress.player_health_offset, amount);
-
-            }
-            if (inp.StartsWith("up"))
-            {
-                List<Entity> entities = GetEntityList();
-                foreach (Entity ent in entities) 
-                {
-                    ent.UpdatePosition(processHandle);
-
-                    ent.SetPosition(processHandle, ent.x, ent.y, ent.z + 2.0f);
-                }
-            }
-            if (inp.StartsWith("spawn"))
-            {
-                SpawnEntity();
-            }
-            if (inp.StartsWith("model"))
-            {
-                var model = GetKomaruEntity().GetId(processHandle);
-
-                foreach (var ent in GetEntityList())
-                {
-                    ent.SetId(processHandle, model);
-                }
-
-            }
-            if (inp.StartsWith("tp"))
-            {
-                var kom = GetKomaruEntity();
-
-                foreach (var ent in GetEntityList())
-                {
-                    ent.SetPosition(processHandle, kom.x, kom.y, kom.z);
-                }
-
-            }
-            return false;
-        }
-
-        Noclip noclip;
-        public void Init()
-        {
-            process = MemoryRead.GetProcess("game");
-            processId = process.Id;
-            processHandle = MemoryRead.GetProcessHandle(process);
-            baseAddress = MemoryRead.GetProcessBaseAddress(process);
-
-
-            clearConsole = "";
-            for (int i = 0; i < 200; i++)
-            {
-                clearConsole += new string('\t', 30) + "\n";
-            }
-
-
-            main_thread = new Thread(new ThreadStart(Main_Loop));
-            main_thread.Start();
-            noclip = new Noclip(this);
-           
-
-
-            while (true)
-            {
-                var key = Console.ReadKey();
-            
-                if (key.Key == ConsoleKey.Backspace && tempinp.Length > 0)
-                {
-                    tempinp = tempinp.Substring(0, tempinp.Length - 1);
-                }
-                else
-                {
-                    tempinp += key.KeyChar;
-                }
-                if (key.Key == ConsoleKey.Enter)
-                {
-                    if (ProcessCommand(tempinp))
-                    {
-                        break;
-                    }
-                }
-
-
-
-                Thread.Sleep(10);
-            }
-            main_thread.Suspend();
-           
-            
+            break;
         }
     }
+
+
+
+    Thread.Sleep(10);
+}
+main_thread.Suspend();
+
+
+}
+}
 }

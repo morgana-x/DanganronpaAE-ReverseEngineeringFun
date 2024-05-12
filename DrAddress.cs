@@ -24,12 +24,12 @@ namespace Launcher
 
 
 
-        public static long add_entity_func_pointer_offset = 0x28AB; // Probably WRONG!
+        public static long add_entity_func_pointer_offset = 0xBA3A0; //0xBA810; // Probably WRONG!
 
 
        // public static long camera_stuff_offset = //0x802CCC; // Z position of camera?
 
-        public static long camera_pos_x_offset = 0x802CC4;
+        public static long camera_pos_x_offset = 0x802CC4; // Not certain!
         public static long camera_pos_y_offset = 0x802CC8;
         public static long camera_pos_z_offset = 0x802CCC; // Rotation etc comes after positions, might do later if bothered!
 
@@ -37,6 +37,23 @@ namespace Launcher
 
         public static long level_major_id_offset = 0x2FE7E0; // NOT CERTAIN, COULD BE SOMETHING ELSE
         public static long level_minor_id_offset = 0x765F80; // NOT CERTAIN, COULD BE SOMETHING ELSE
+
+
+        // Spawn entity functions???
+        // game.exe+BA810 - 48 85 C9              - test rcx,rcx 
+
+        // Spawn entity?? (Crashes game when called, maybe wrong parameters?)
+        // game.exe+108770 - 40 53                 - push rbx
+
+
+        // Most likely the core function all spawn entity functions use?
+        // game.exe+1EBAC0 - 4C 8B D9              - mov r11,rcx
+
+        // Maybe this is the actual spawn entity function?
+        // game.exe+BA3A0 - 48 89 5C 24 08        - mov [rsp+08],rbx
+
+        // another possible func
+        // game.exe+58AE0 - 40 57                 - push rdi
 
 
         // Pretty useless currently
